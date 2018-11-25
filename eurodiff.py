@@ -1,8 +1,9 @@
 import constants
 from copy import deepcopy
 
-
-def get_data(_input, case): #return dictionary, 0 for eof, -1 for error
+#take array of strings and current case number
+#return dictionary, 0 for eof, -1 for error
+def get_data(_input, case): 
     line_num = 0
 
     for i in range(case-1):
@@ -36,18 +37,14 @@ def get_data(_input, case): #return dictionary, 0 for eof, -1 for error
             countries_list[curr_country]["y1"] = int(curr_line[2])-1
             countries_list[curr_country]["x2"] = int(curr_line[3])-1
             countries_list[curr_country]["y2"] = int(curr_line[4])-1 
-        except IndexError:
+        except (ValueError, IndexError):
             print("Input error - bad data at country ", curr_country+1)
             return -1
 
-        if countries_list[curr_country]["x1"] < 0 \
-                or countries_list[curr_country]["y1"] < 0 \
-                or countries_list[curr_country]["x2"] < 0 \
-                or countries_list[curr_country]["y2"] < 0 \
-                or countries_list[curr_country]["x1"] > constants.MAX_SIZE-1 \
-                or countries_list[curr_country]["y1"] > constants.MAX_SIZE-1 \
-                or countries_list[curr_country]["x2"] > constants.MAX_SIZE-1 \
-                or countries_list[curr_country]["y2"] > constants.MAX_SIZE-1 \
+        if not (0 <= countries_list[curr_country]["x1"] <= constants.MAX_SIZE-1) \
+                or not (0 <= countries_list[curr_country]["x2"] <= constants.MAX_SIZE-1) \
+                or not (0 <= countries_list[curr_country]["y1"] <= constants.MAX_SIZE-1) \
+                or not (0 <= countries_list[curr_country]["x2"] <= constants.MAX_SIZE-1) \
                 or countries_list[curr_country]["y2"] < countries_list[curr_country]["y1"] \
                 or countries_list[curr_country]["x2"] < countries_list[curr_country]["x1"]:
             print("Input error - bad coordinates")
