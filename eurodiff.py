@@ -1,8 +1,16 @@
-import constants
+from constants import MAX_SIZE, MAX_COUNTRIES, REPRESENTATIVE_COEF, STARTING_CAPITAL
 from copy import deepcopy
+from enum import Enum
+from itertools import product
 
-#take array of strings and current case number
-#return dictionary, 0 for eof, -1 for error
+class CountryData(Enum): #used to navigate in 3d array
+    X1 = "x1"
+    Y1 = "y1"
+    X2 = "x2"
+    Y2 = "y2"
+
+#input array of strings and current case number
+#output dictionary, 0 for eof, -1 for error
 def get_data(_input, case): 
     line_num = 0
 
@@ -23,33 +31,36 @@ def get_data(_input, case):
     if countries_count == 0:
         return 0
 
-    if countries_count < 0 or countries_count > 25:
+    if countries_count < 0 or countries_count > MAX_COUNTRIES:
         print("Input error - bad number of countries")
         return -1
 
     countries_list = [dict() for country in range(countries_count)]
     for i in range(line_num+1, line_num+countries_count+1):
         curr_line = _input[i].split()
-        try:
-            curr_country = i - line_num - 1 #number of current parsed country
-            countries_list[curr_country]["name"] = curr_line[0]
-            countries_list[curr_country]["x1"] = int(curr_line[1])-1 
-            countries_list[curr_country]["y1"] = int(curr_line[2])-1
-            countries_list[curr_country]["x2"] = int(curr_line[3])-1
-            countries_list[curr_country]["y2"] = int(curr_line[4])-1 
-        except (ValueError, IndexError):
+        curr_country = i - line_num - 1 #number of current parsed country
+        countries_list[curr_country]["name"] = curr_line[0]
+
+        if not check_input_validity(countries_list, curr_line, curr_country):
             print("Input error - bad data at country ", curr_country+1)
             return -1
 
-        if not (0 <= countries_list[curr_country]["x1"] <= constants.MAX_SIZE-1) \
-                or not (0 <= countries_list[curr_country]["x2"] <= constants.MAX_SIZE-1) \
-                or not (0 <= countries_list[curr_country]["y1"] <= constants.MAX_SIZE-1) \
-                or not (0 <= countries_list[curr_country]["x2"] <= constants.MAX_SIZE-1) \
-                or countries_list[curr_country]["y2"] < countries_list[curr_country]["y1"] \
-                or countries_list[curr_country]["x2"] < countries_list[curr_country]["x1"]:
-            print("Input error - bad coordinates")
-            return -1
     return countries_list
+
+
+def check_input_validity(countries_list, curr_line, curr_country): #return False if input file is invalid in any way
+    try:
+        for output_index, input_index in zip(CountryData, range(1,5)):
+            countries_list[curr_country][output_index] = int(curr_line[input_index])-1
+        for i in CountryData:
+            if  not (0 <= countries_list[curr_country][i] <= MAX_SIZE-1):
+                return False
+    except (ValueError, IndexError):
+            return False
+    if countries_list[curr_country][CountryData.Y2] < countries_list[curr_country][CountryData.Y1] \
+                         or countries_list[curr_country][CountryData.X2] < countries_list[curr_country][CountryData.X1]:
+        return False
+    return True
 
 
 def check_overlap(countries_list): #return True if any overlap
@@ -57,22 +68,19 @@ def check_overlap(countries_list): #return True if any overlap
         return False
     for i in range(len(countries_list)-1):
         for j in range(i+1, len(countries_list)):
-            if countries_list[i]["x1"] <= countries_list[j]["x2"] and \
-                    countries_list[i]["x2"] >= countries_list[j]["x1"] and \
-                    countries_list[i]["y1"] <= countries_list[j]["y2"] and \
-                    countries_list[i]["y2"] >= countries_list[j]["y1"]:
+            if countries_list[i][CountryData.X1] <= countries_list[j][CountryData.X2] and \
+                    countries_list[i][CountryData.X2] >= countries_list[j][CountryData.X1] and \
+                    countries_list[i][CountryData.Y1] <= countries_list[j][CountryData.Y2] and \
+                    countries_list[i][CountryData.Y2] >= countries_list[j][CountryData.Y1]:
                 return True
     return False
 
  
-def check_fill(_map, x_max, y_max, _count,): #returns vector of full countries
+def get_full_countries(_map, x_max, y_max, _count,): #returns vector of full countries
     country_status = [1 for k in range(_count)]
-    for x in range(x_max):
-            for y in range(y_max):
-                if _map[x][y][0] != 0:
-                    for z in range(1, _count+1):
-                        if _map[x][y][z] == 0:
-                            country_status[_map[x][y][0]-1] = 0
+    for x,y,z in product(range(x_max), range(y_max), range(1, _count+1)):
+        if _map[x][y][0] != 0 and _map[x][y][z] == 0:
+            country_status[_map[x][y][0]-1] = 0
     return country_status
 
 
@@ -109,10 +117,10 @@ def main():
         countries_list = 0
         #dictionary filled with data with keys
         #"name" - country name
-        #"x1" - starting coor x
-        #"y1" - starting coor y
-        #"x2" - finish coor x
-        #"y2" - finish coor y
+        #CountryData.X1 - starting coor x
+        #CountryData.Y1 - starting coor y
+        #CountryData.X2 - finish coor x
+        #CountryData.Y2 - finish coor y
         countries_list = get_data(_input, case)
         
         if (countries_list == 0):
@@ -126,14 +134,14 @@ def main():
 
         countries_count = len(countries_list)
 
-        x_max = 0 
-        y_max = 0
+        x_max = 1
+        y_max = 1
         #crop array size to maximum needed for time saving
         for i in range(countries_count):
-            if countries_list[i]["x2"] > x_max: 
-                x_max = countries_list[i]["x2"]
-            if countries_list[i]["y2"] > y_max: 
-                y_max = countries_list[i]["y2"]
+            if countries_list[i][CountryData.X2] > x_max: 
+                x_max = countries_list[i][CountryData.X2]
+            if countries_list[i][CountryData.Y2] > y_max: 
+                y_max = countries_list[i][CountryData.Y2]
         #3d array with spacial x and y, and z rezerved for currency "pockets"
         #0 for non-european, 1-25 each european country
         europe_map = [[[0 for k in range(countries_count+1)] \
@@ -142,15 +150,13 @@ def main():
         #fill initial map
         #europe_map[x][y][0] - country index in dictionaries array
         #europe_map[x][y][europe_map[x][y][0]] - currency of this country
-        for x in range(x_max+1):
-            for y in range(y_max+1):
-                for z in range(countries_count):
-                    if x >= countries_list[z]["x1"] \
-                            and y >= countries_list[z]["y1"] \
-                            and x <= countries_list[z]["x2"] \
-                            and y <= countries_list[z]["y2"]:
-                        europe_map[x][y][0] = z+1 
-                        europe_map[x][y][z+1] = constants.STARTING_CAPITAL
+        for x, y, z in product(range(x_max+1), range(y_max+1), range(countries_count)):
+            if x >= countries_list[z][CountryData.X1] \
+                    and y >= countries_list[z][CountryData.Y1] \
+                    and x <= countries_list[z][CountryData.X2] \
+                    and y <= countries_list[z][CountryData.Y2]:
+                europe_map[x][y][0] = z+1 
+                europe_map[x][y][z+1] = STARTING_CAPITAL
         days_without_change = 0
         day = 0
         country_status = [0 for k in range(countries_count)]
@@ -159,7 +165,7 @@ def main():
             if days_without_change > 10000:
                 print("Seemingly infinite loop, taking next case")
                 break
-            new_country_status = check_fill(europe_map, x_max+1, y_max+1, countries_count)
+            new_country_status = get_full_countries(europe_map, x_max+1, y_max+1, countries_count)
             if country_status != new_country_status:
                 days_without_change = 0
                 diff = list(x-y for x,y in zip(country_status,new_country_status))
@@ -173,26 +179,24 @@ def main():
             #regular copy by reference wouldn't work, using deepcopy()
             country_status = deepcopy(new_country_status)
             europe_map_copy = deepcopy(europe_map)
-            for x in range(x_max+1):
-                for y in range(y_max+1):
-                    if(europe_map[x][y][0] != 0):
-                        for z in range(1, countries_count+1):
-                            neighbor_counter = 0
-                            #representative number of coins of country z in city xy
-                            representative_count = int(europe_map_copy[x][y][z]*constants.REPRESENTATIVE_COEF) 
-                            if x != 0 and europe_map[x-1][y][0] != 0:
-                                neighbor_counter += 1
-                                europe_map[x-1][y][z] += representative_count
-                            if x != x_max and europe_map[x+1][y][0] != 0:
-                                neighbor_counter += 1
-                                europe_map[x+1][y][z] += representative_count
-                            if y != 0 and europe_map[x][y-1][0] != 0:
-                                neighbor_counter += 1
-                                europe_map[x][y-1][z] += representative_count
-                            if y != y_max and europe_map[x][y+1][0] != 0:
-                                neighbor_counter += 1
-                                europe_map[x][y+1][z] += representative_count
-                            europe_map[x][y][z] -= neighbor_counter*representative_count
+            for x, y, z in product(range(x_max+1), range(y_max+1), range(1, countries_count+1)):
+                if(europe_map[x][y][0] != 0):
+                    neighbor_counter = 0
+                    #representative number of coins of country z in city xy
+                    representative_count = int(europe_map_copy[x][y][z]*REPRESENTATIVE_COEF) 
+                    if x != 0 and europe_map[x-1][y][0] != 0:
+                        neighbor_counter += 1
+                        europe_map[x-1][y][z] += representative_count
+                    if x != x_max and europe_map[x+1][y][0] != 0:
+                        neighbor_counter += 1
+                        europe_map[x+1][y][z] += representative_count
+                    if y != 0 and europe_map[x][y-1][0] != 0:
+                        neighbor_counter += 1
+                        europe_map[x][y-1][z] += representative_count
+                    if y != y_max and europe_map[x][y+1][0] != 0:
+                        neighbor_counter += 1
+                        europe_map[x][y+1][z] += representative_count
+                    europe_map[x][y][z] -= neighbor_counter*representative_count
             day += 1
             days_without_change += 1
         case += 1
